@@ -1,0 +1,42 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "lib": [
+            "esnext",
+            "dom",
+            "dom.iterable",
+            "scripthost"
+        ],
+        "baseUrl": "./",
+        "module": "ESNext",
+        "moduleResolution": "node",
+        "paths": {
+            "@zaiui/use": [
+                "packages"
+            ],
+            "@zaiui/use/*": [
+                "packages/*"
+            ]
+        },
+        "resolveJsonModule": true,
+        "strict": true,
+        "strictFunctionTypes": true,
+        "strictNullChecks": true,
+        "alwaysStrict": true,
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": false,
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": false,
+        "esModuleInterop": true,
+        "skipDefaultLibCheck": true,
+        "skipLibCheck": true
+    },
+    "include": [
+        "packages/**/*"
+    ],
+    "ts-node": {
+        "files": true
+    }
+}

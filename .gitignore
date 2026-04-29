@@ -1,0 +1,8 @@
+dist
+lib
+lang
+node_modules
+.idea
+cache
+.vscode
+.DS_Store

@@ -1,0 +1,62 @@
+{
+    "name": "@zaiui/use",
+    "type": "module",
+    "version": "1.0.2",
+    "scripts": {
+        "dev": "tsup-node --watch",
+        "build": "tsup-node",
+        "clean": "rimraf dist lib es types",
+        "typecheck": "tsc --noEmit",
+        "watch": "tsup-node --watch",
+        "link": "yarn link",
+        "unlink": "yarn unlink"
+    },
+    "sideEffects": false,
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "require": "./dist/index.cjs"
+        },
+        "./*": "./*"
+    },
+    "typesVersions": {
+        "*": {
+            "*": [
+                "./dist/*",
+                "./*"
+            ]
+        }
+    },
+    "files": [
+        "dist",
+        "LICENSE",
+        "README.md"
+    ],
+    "engines": {
+        "node": ">=16.0.0"
+    },
+    "devDependencies": {
+        "@types/node": "^25.2.0",
+        "rimraf": "^6.1.2",
+        "tsup": "^8.5.1",
+        "typescript": "^5.9.3"
+    },
+    "dependencies": {
+        "bignumber.js": "^10.0.2"
+    },
+    "author": "iZaiZaiA<https://github.com/iZaiZaiA>",
+    "copyright": "Copyright © 2023 iZaiZaiA And @zaiui/use",
+    "license": "MIT",
+    "keywords": [
+        "library",
+        "tools",
+        "utils",
+        "hook",
+        "vue",
+        "typescript"
+    ]
+}
