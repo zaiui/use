@@ -28,6 +28,8 @@ export * from './dependency/index';
 
 export * from './hook/index';
 
+export * from './config/index';
+
 export * from './version';
 
 export { default } from './type/index';

@@ -3,33 +3,37 @@
  * @description 提供 localStorage 和 sessionStorage 的封装操作
  * @module store
  * @author ZAIUI
- * @version 1.0.2
+ * @version 1.0.5
  */
 
+import {
+    collectScopedStoreKeys,
+    getStoreKeyPrefix,
+    isScopedStoreDataKey,
+    isStoreMetaKey,
+    resolveStoreKey,
+    storeTimeKey,
+    toLogicalStoreKey,
+} from '../config/state';
 import { getStorage } from '../shared/browser';
-
-const STORE_TIME_PREFIX = '@zaiui/use:time:';
-
-const storeTimeKey = (key: string): string => `${STORE_TIME_PREFIX}${key}`;
-
-const isStoreMetaKey = (key: string): boolean => key.startsWith(STORE_TIME_PREFIX);
 
 /**
  * 保存数据到本地存储
- * @param key - 存储键名
+ * @param key - 存储键名（逻辑键，会自动加上 configureUse 中的 storeKey 前缀）
  * @param value - 要存储的值（会自动 JSON 序列化）
  * @param session - 是否使用 sessionStorage，默认为 false（使用 localStorage）
  * @example
- * setStore('user', { name: '张三', age: 20 });
- * setStore('token', 'abc123', true); // 使用 sessionStorage
+ * configureUse({ storeKey: 'abc' });
+ * setStore('user', { name: '张三' }); // 实际键 abc-user
  */
 export const setStore = (key: string, value: unknown, session = false): void => {
     const storage = getStorage(session);
     if (!storage) {
         return;
     }
-    storage.setItem(key, JSON.stringify(value));
-    storage.setItem(storeTimeKey(key), String(Date.now()));
+    const storageKey = resolveStoreKey(key);
+    storage.setItem(storageKey, JSON.stringify(value));
+    storage.setItem(storeTimeKey(storageKey), String(Date.now()));
 };
 
 /**
@@ -37,16 +41,13 @@ export const setStore = (key: string, value: unknown, session = false): void => 
  * @param key - 存储键名
  * @param session - 是否使用 sessionStorage，默认为 false
  * @returns 返回存储的值（自动反序列化），如果键不存在返回 undefined
- * @example
- * const user = getStore<{ name: string }>('user'); // { name: '张三' }
- * const token = getStore<string>('token', true);
  */
 export const getStore = <T>(key: string, session = false): T | undefined => {
     const storage = getStorage(session);
     if (!storage) {
         return undefined;
     }
-    const value = storage.getItem(key);
+    const value = storage.getItem(resolveStoreKey(key));
     if (value === null) {
         return undefined;
     }
@@ -61,26 +62,20 @@ export const getStore = <T>(key: string, session = false): T | undefined => {
  * 删除本地存储中的指定数据
  * @param key - 要删除的存储键名
  * @param session - 是否使用 sessionStorage，默认为 false
- * @example
- * delStore('user');
- * delStore('token', true);
  */
 export const delStore = (key: string, session = false): void => {
     const storage = getStorage(session);
     if (!storage) {
         return;
     }
-    storage.removeItem(key);
-    storage.removeItem(storeTimeKey(key));
+    const storageKey = resolveStoreKey(key);
+    storage.removeItem(storageKey);
+    storage.removeItem(storeTimeKey(storageKey));
 };
 
 /**
- * 获取所有存储数据
+ * 获取所有存储数据（仅当前 storeKey 作用域；name 为逻辑键）
  * @param session - 是否使用 sessionStorage，默认为 false
- * @returns 返回包含所有键值对的数组，每个元素包含 name（键名）和 content（值）
- * @example
- * const all = allStore(); // [{ name: 'user', content: {...} }, ...]
- * const sessionAll = allStore(true);
  */
 export const allStore = <T>(session = false): Array<{ name: string; content: T }> => {
     const storage = getStorage(session);
@@ -90,15 +85,15 @@ export const allStore = <T>(session = false): Array<{ name: string; content: T }
     const result: Array<{ name: string; content: T }> = [];
     for (let i = 0; i < storage.length; i++) {
         const key = storage.key(i);
-        if (!key || isStoreMetaKey(key)) {
+        if (!key || isStoreMetaKey(key) || !isScopedStoreDataKey(key)) {
             continue;
         }
         const value = storage.getItem(key);
         if (value !== null) {
             try {
-                result.push({ name: key, content: JSON.parse(value) });
+                result.push({ name: toLogicalStoreKey(key), content: JSON.parse(value) });
             } catch {
-                result.push({ name: key, content: value as unknown as T });
+                result.push({ name: toLogicalStoreKey(key), content: value as unknown as T });
             }
         }
     }
@@ -106,25 +101,29 @@ export const allStore = <T>(session = false): Array<{ name: string; content: T }
 };
 
 /**
- * 清空指定存储的所有数据
+ * 清空存储：未配置 storeKey 时清空整个 Storage；配置后仅删除带前缀的键
  * @param session - 是否使用 sessionStorage，默认为 false
- * @example
- * clearStore(); // 清空 localStorage
- * clearStore(true); // 清空 sessionStorage
  */
 export const clearStore = (session = false): void => {
     const storage = getStorage(session);
-    storage?.clear();
+    if (!storage) {
+        return;
+    }
+    if (!getStoreKeyPrefix()) {
+        storage.clear();
+        return;
+    }
+    for (const key of collectScopedStoreKeys(storage)) {
+        storage.removeItem(key);
+    }
 };
 
 /**
- * 清空所有存储（包括 localStorage 和 sessionStorage）
- * @example
- * clearAllStore();
+ * 清空 localStorage 与 sessionStorage（受 storeKey 作用域约束）
  */
 export const clearAllStore = (): void => {
-    getStorage(false)?.clear();
-    getStorage(true)?.clear();
+    clearStore(false);
+    clearStore(true);
 };
 
 /**
@@ -132,18 +131,13 @@ export const clearAllStore = (): void => {
  * @param key - 存储键名
  * @param time - 过期时间（毫秒），默认为 0（永不过期）
  * @param session - 是否使用 sessionStorage，默认为 false
- * @returns 如果缓存已过期或不存在返回 true，否则返回 false
- * @description 用于判断本地存储的数据是否超过指定时间；时间戳由 setStore 自动写入
- * @example
- * storeTime('user', 60000); // 检查 user 缓存是否超过 60 秒
- * storeTime('token', 3600000); // 检查 token 缓存是否超过 1 小时
  */
 export const storeTime = (key: string, time = 0, session = false): boolean => {
     const storage = getStorage(session);
     if (!storage) {
         return true;
     }
-    const timestamp = storage.getItem(storeTimeKey(key));
+    const timestamp = storage.getItem(storeTimeKey(resolveStoreKey(key)));
     if (!timestamp) {
         return true;
     }
