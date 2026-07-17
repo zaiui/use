@@ -1,0 +1,33 @@
+---
+description: 使用 @zaiui/use 工具库时的导入、配置与 API 约定
+globs: **/*.{ts,tsx,js,jsx,vue}
+alwaysApply: false
+---
+
+# @zaiui/use
+
+本项目依赖 `@zaiui/use`。编写工具逻辑、校验、格式化、本地存储或防连点交互时，优先使用本库已有 API，不要无必要引入 lodash 等等价库。
+
+## 导入
+
+- 使用命名导入：`import { isEmpty, setStore } from '@zaiui/use'`
+- 不要使用 `import use from '@zaiui/use'`（default 仅为类型工具集合，不是全库）
+- 包仅主入口 `"."`，无子路径导出
+
+## 全局配置
+
+- 大多数函数无需初始化
+- 使用 `setStore` / `getStore` / `clearStore` 前，确认入口是否已 `configureUse({ storeKey })`；未配置时 `clearStore()` 会清空整个 Storage
+- dayjs 相关格式化依赖 `configureUse({ dayjsLocale })` 或库默认 locale
+
+## 易错 API
+
+- `useClick(delay?, key?)` → `Promise<boolean>`，在点击/提交处理函数内 `await`，不是 Vue composable
+- `useStore()` 是工具方法集合，不是 Pinia
+- `useMitt` / `emitter` 是事件总线，不是 Vue provide/inject
+
+## 查 API
+
+1. `node_modules/@zaiui/use/dist/**/*.d.ts` 中的 JSDoc
+2. 包内 `node_modules/@zaiui/use/AGENTS.md`
+3. 在线文档 http://use.231004.cn

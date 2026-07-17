@@ -1,7 +1,7 @@
 {
     "name": "@zaiui/use",
     "type": "module",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "JavaScript / TypeScript 工具函数库",
     "scripts": {
         "dev": "tsup-node --watch",
@@ -32,6 +32,8 @@
     },
     "files": [
         "dist",
+        "AGENTS.md",
+        "templates",
         "LICENSE",
         "README.md"
     ],
