@@ -79,7 +79,13 @@ export const useMitt = (handlers = new Map<string, Set<EventHandler>>()): MittEm
         emit<T>(type: string, data?: T): void {
             const set = handlers.get(type);
             if (set) {
-                set.forEach(handler => handler(data));
+                set.forEach((handler) => {
+                    try {
+                        handler(data);
+                    } catch {
+                        // 单个订阅错误不影响其余 handler
+                    }
+                });
             }
         },
         clear(): void {

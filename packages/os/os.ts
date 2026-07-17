@@ -3,21 +3,10 @@
  * @description 提供浏览器检测、全屏控制、剪贴板操作等功能
  * @module os
  * @author ZAIUI
- * @version 1.0.0
+ * @version 1.0.2
  */
 
-/**
- * 获取字符串的实际长度（支持 Emoji 表情）
- * @param str - 要计算长度的字符串
- * @returns 字符串的实际字符数
- * @example
- * getActualLength('hello')    // 5
- * getActualLength('你好')     // 2
- * getActualLength('👋🌍')     // 2
- */
-export const getActualLength = (str: string): number => {
-    return Array.from(str).length;
-};
+import { getDocument, getNavigator, isBrowser } from '../shared/browser';
 
 /**
  * 获取操作系统位数
@@ -27,7 +16,11 @@ export const getActualLength = (str: string): number => {
  * getOsBit() // 'mac'（在 macOS 系统上）
  */
 export const getOsBit = (): '32' | '64' | 'mac' | 'unknown' => {
-    const userAgent = navigator.userAgent;
+    const navigatorRef = getNavigator();
+    if (!navigatorRef) {
+        return 'unknown';
+    }
+    const userAgent = navigatorRef.userAgent;
     if (userAgent.indexOf('Win64') !== -1 || userAgent.indexOf('x64') !== -1) {
         return '64';
     }
@@ -48,28 +41,32 @@ export const getOsBit = (): '32' | '64' | 'mac' | 'unknown' => {
  * getBrowserVersion() // { name: 'firefox', version: '121' }
  */
 export const getBrowserVersion = (): { name: string; version: string } => {
-    const ua = navigator.userAgent;
+    const navigatorRef = getNavigator();
+    if (!navigatorRef) {
+        return { name: 'unknown', version: 'unknown' };
+    }
+    const ua = navigatorRef.userAgent;
     let name = 'unknown';
     let version = 'unknown';
-    
-    if (ua.indexOf('Chrome') !== -1) {
+
+    if (ua.includes('Edg/')) {
+        name = 'edge';
+        const match = ua.match(/Edg\/(\d+)/);
+        version = match ? match[1] : 'unknown';
+    } else if (ua.includes('Chrome') && !ua.includes('Edg')) {
         name = 'chrome';
         const match = ua.match(/Chrome\/(\d+)/);
         version = match ? match[1] : 'unknown';
-    } else if (ua.indexOf('Firefox') !== -1) {
+    } else if (ua.includes('Firefox')) {
         name = 'firefox';
         const match = ua.match(/Firefox\/(\d+)/);
         version = match ? match[1] : 'unknown';
-    } else if (ua.indexOf('Safari') !== -1) {
+    } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
         name = 'safari';
         const match = ua.match(/Version\/(\d+)/);
         version = match ? match[1] : 'unknown';
-    } else if (ua.indexOf('Edge') !== -1) {
-        name = 'edge';
-        const match = ua.match(/Edge\/(\d+)/);
-        version = match ? match[1] : 'unknown';
     }
-    
+
     return { name, version };
 };
 
@@ -82,10 +79,14 @@ export const getBrowserVersion = (): { name: string; version: string } => {
  * fullScreen(false); // 退出全屏
  */
 export const fullScreen = async (enable = true): Promise<void> => {
+    const doc = getDocument();
+    if (!doc?.documentElement) {
+        return;
+    }
     if (enable) {
-        await document.documentElement.requestFullscreen();
+        await doc.documentElement.requestFullscreen();
     } else {
-        await document.exitFullscreen();
+        await doc.exitFullscreen();
     }
 };
 
@@ -96,6 +97,9 @@ export const fullScreen = async (enable = true): Promise<void> => {
  * newWindow('https://www.example.com');
  */
 export const newWindow = (url: string): void => {
+    if (!isBrowser()) {
+        return;
+    }
     window.open(url, '_blank');
 };
 
@@ -108,13 +112,17 @@ export const newWindow = (url: string): void => {
  * await addOnJs('https://example.com/script.js');
  */
 export const addOnJs = (src: string, type = 'text/javascript'): Promise<void> => {
+    const doc = getDocument();
+    if (!doc) {
+        return Promise.reject(new Error('document is not available'));
+    }
     return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
+        const script = doc.createElement('script');
         script.type = type;
         script.src = src;
         script.onload = () => resolve();
         script.onerror = () => reject();
-        document.head.appendChild(script);
+        doc.head.appendChild(script);
     });
 };
 
@@ -167,7 +175,7 @@ export const getMonthList = (): string[] => {
  */
 export const setImageFilter = async (id: string, value: string): Promise<boolean> => {
     try {
-        const element = document.getElementById(id);
+        const element = getDocument()?.getElementById(id);
         if (element) {
             element.style.filter = value;
             return true;
@@ -212,8 +220,12 @@ export const setImageColor = async (value: string): Promise<{
  * await setCopyText('Hello World');
  */
 export const setCopyText = async (text: string): Promise<boolean> => {
+    const navigatorRef = getNavigator();
+    if (!navigatorRef?.clipboard) {
+        return false;
+    }
     try {
-        await navigator.clipboard.writeText(text);
+        await navigatorRef.clipboard.writeText(text);
         return true;
     } catch {
         return false;
@@ -228,8 +240,12 @@ export const setCopyText = async (text: string): Promise<boolean> => {
  * if (text) console.log(text);
  */
 export const getCopyText = async (): Promise<string | false> => {
+    const navigatorRef = getNavigator();
+    if (!navigatorRef?.clipboard) {
+        return false;
+    }
     try {
-        const text = await navigator.clipboard.readText();
+        const text = await navigatorRef.clipboard.readText();
         return text;
     } catch {
         return false;
@@ -258,7 +274,7 @@ export const setPosInsert = (startPos: number, endPos: number, value1: string, v
  * setPosRange('usernameInput', 5); // 将光标设置到第 5 个字符位置
  */
 export const setPosRange = (id: string, pos: number): void => {
-    const element = document.getElementById(id) as HTMLInputElement | null;
+    const element = getDocument()?.getElementById(id) as HTMLInputElement | null;
     if (element) {
         element.setSelectionRange(pos, pos);
         element.focus();
@@ -272,7 +288,7 @@ export const setPosRange = (id: string, pos: number): void => {
  * setEleFocus('usernameInput'); // 让输入框获得焦点
  */
 export const setEleFocus = (id: string): void => {
-    const element = document.getElementById(id) as HTMLElement | null;
+    const element = getDocument()?.getElementById(id) as HTMLElement | null;
     element?.focus();
 };
 
@@ -284,5 +300,5 @@ export const setEleFocus = (id: string): void => {
  * setEleMainColor('#ff6600'); // 设置为橙色
  */
 export const setEleMainColor = (color = '#409EFF'): void => {
-    document.documentElement.style.setProperty('--el-color-primary', color);
+    getDocument()?.documentElement.style.setProperty('--el-color-primary', color);
 };

@@ -4,6 +4,18 @@
 
 比如：我需要的某种方法函数没有、所提供的方法函数库不满足业务需求、产生的bug反馈后解决慢等原因，所以，我就自己封装了一个自用的方法函数库。
 
+## 安装
+
+```bash
+yarn add @zaiui/use
+# 或
+npm install @zaiui/use
+```
+
+```ts
+import { useClick, isEmpty, getStore } from '@zaiui/use';
+```
+
 ## API文档
 
 为了方便自己查询和使用相关方法函数，我为此搞了这么一个文档，方便自己使用，也方便大家使用。

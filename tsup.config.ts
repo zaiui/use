@@ -1,10 +1,17 @@
-import { defineConfig } from 'tsup'
+import { defineConfig } from 'tsup';
 
 export default defineConfig({
     entry: ['./packages/index.ts'],
     format: ['cjs', 'esm'],
-    dts: true,
+    dts: false,
     sourcemap: false,
     clean: true,
-    treeshake: true
-})
+    treeshake: true,
+    cjsInterop: true,
+    external: ['dayjs'],
+    outExtension({ format }) {
+        return {
+            js: format === 'cjs' ? '.cjs' : '.js',
+        };
+    },
+});

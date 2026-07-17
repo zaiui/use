@@ -13,6 +13,7 @@ import { isArray, isObject, isString } from '../type/index';
  * @param value - 数组元素的初始值，默认为空字符串
  * @param len - 数组长度，默认为 1
  * @returns 返回填充了指定值的数组
+ * @description 当 value 为对象或数组时，各元素共享同一引用
  * @example
  * createArr('a', 3) // ['a', 'a', 'a']
  * createArr(0, 5)   // [0, 0, 0, 0, 0]

@@ -3,7 +3,7 @@
  * @description 提供颜色处理和 CSS filter 生成功能
  * @module os/color
  * @author ZAIUI
- * @version 1.0.0
+ * @version 1.0.3
  */
 
 export interface HSLColor {
@@ -18,6 +18,72 @@ export interface SolverResult {
     filter: string;
 }
 
+const IDENTITY_MATRIX: readonly number[] = [
+    1, 0, 0,
+    0, 1, 0,
+    0, 0, 1,
+];
+
+const GRAYSCALE_MATRIX: readonly number[] = [
+    0.2126, 0.7152, 0.0722,
+    0.2126, 0.7152, 0.0722,
+    0.2126, 0.7152, 0.0722,
+];
+
+const SEPIA_MATRIX: readonly number[] = [
+    0.393, 0.769, 0.189,
+    0.349, 0.686, 0.168,
+    0.272, 0.534, 0.131,
+];
+
+/** saturate(0) 对应的矩阵系数 */
+const DESATURATE_MATRIX: readonly number[] = [
+    0.213, 0.715, 0.072,
+    0.213, 0.715, 0.072,
+    0.213, 0.715, 0.072,
+];
+
+const FILTER_PARAM_COUNT = 6;
+const SPSA_GAMMA = 1 / 6;
+const WIDE_SEARCH_INITIAL = [50, 20, 3750, 50, 100, 100];
+
+const clamp255 = (value: number): number => Math.max(0, Math.min(255, value));
+
+/** 在 identity 与 effect 矩阵之间按 amount 插值（与原有 a + b*(1-v) 公式等价） */
+const blendMatrix = (effect: readonly number[], amount: number): number[] => {
+    const t = 1 - amount;
+    const out = new Array<number>(9);
+    for (let i = 0; i < 9; i++) {
+        out[i] = effect[i] + (IDENTITY_MATRIX[i] - effect[i]) * t;
+    }
+    return out;
+};
+
+const clampFilterParam = (value: number, idx: number): number => {
+    let max = 100;
+    if (idx === 2) {
+        max = 7500;
+    } else if (idx === 4 || idx === 5) {
+        max = 200;
+    }
+    if (idx === 3) {
+        if (value > max) {
+            return value % max;
+        }
+        if (value < 0) {
+            return max + value % max;
+        }
+        return value;
+    }
+    if (value < 0) {
+        return 0;
+    }
+    if (value > max) {
+        return max;
+    }
+    return value;
+};
+
 /**
  * RGB 颜色类，用于颜色处理和转换
  * @description 提供 RGB 颜色的基本操作和 CSS filter 效果模拟
@@ -27,47 +93,26 @@ export class Color {
     g: number;
     b: number;
 
-    /**
-     * 创建 RGB 颜色实例
-     * @param r - 红色通道值（0-255）
-     * @param g - 绿色通道值（0-255）
-     * @param b - 蓝色通道值（0-255）
-     */
     constructor(r: number, g: number, b: number) {
         this.r = r;
         this.g = g;
         this.b = b;
     }
 
-    /**
-     * 转换为 RGB 字符串
-     * @returns RGB 格式字符串，如 "rgb(255, 0, 0)"
-     */
     toString(): string {
         return `rgb(${Math.round(this.r)}, ${Math.round(this.g)}, ${Math.round(this.b)})`;
     }
 
-    /**
-     * 设置颜色值
-     * @param r - 红色通道值
-     * @param g - 绿色通道值
-     * @param b - 蓝色通道值
-     */
     set(r: number, g: number, b: number): void {
         this.r = r;
         this.g = g;
         this.b = b;
     }
 
-    /**
-     * 色相旋转
-     * @param angle - 旋转角度（度），默认为 0
-     * @description 根据角度旋转颜色，模拟 CSS filter: hue-rotate()
-     */
     hueRotate(angle = 0): void {
-        angle = angle / 180 * Math.PI;
-        const sin = Math.sin(angle);
-        const cos = Math.cos(angle);
+        const rad = angle / 180 * Math.PI;
+        const sin = Math.sin(rad);
+        const cos = Math.cos(rad);
 
         this.multiply([
             0.213 + cos * 0.787 - sin * 0.213,
@@ -82,120 +127,52 @@ export class Color {
         ]);
     }
 
-    /**
-     * 灰度处理
-     * @param value - 灰度强度（0-1），默认为 1（完全灰度）
-     * @description 将颜色转换为灰度，模拟 CSS filter: grayscale()
-     */
     grayscale(value = 1): void {
-        this.multiply([
-            0.2126 + 0.7874 * (1 - value),
-            0.7152 - 0.7152 * (1 - value),
-            0.0722 - 0.0722 * (1 - value),
-            0.2126 - 0.2126 * (1 - value),
-            0.7152 + 0.2848 * (1 - value),
-            0.0722 - 0.0722 * (1 - value),
-            0.2126 - 0.2126 * (1 - value),
-            0.7152 - 0.7152 * (1 - value),
-            0.0722 + 0.9278 * (1 - value),
-        ]);
+        this.multiply(blendMatrix(GRAYSCALE_MATRIX, value));
     }
 
-    /**
-     * 棕褐色调处理
-     * @param value - 棕褐强度（0-1），默认为 1（完全棕褐色）
-     * @description 添加棕褐色调，模拟 CSS filter: sepia()
-     */
     sepia(value = 1): void {
-        this.multiply([
-            0.393 + 0.607 * (1 - value),
-            0.769 - 0.769 * (1 - value),
-            0.189 - 0.189 * (1 - value),
-            0.349 - 0.349 * (1 - value),
-            0.686 + 0.314 * (1 - value),
-            0.168 - 0.168 * (1 - value),
-            0.272 - 0.272 * (1 - value),
-            0.534 - 0.534 * (1 - value),
-            0.131 + 0.869 * (1 - value),
-        ]);
+        this.multiply(blendMatrix(SEPIA_MATRIX, value));
     }
 
-    /**
-     * 饱和度调整
-     * @param value - 饱和度乘数（0-1），默认为 1（原始饱和度）
-     * @description 调整颜色饱和度，模拟 CSS filter: saturate()
-     */
     saturate(value = 1): void {
-        this.multiply([
-            0.213 + 0.787 * value,
-            0.715 - 0.715 * value,
-            0.072 - 0.072 * value,
-            0.213 - 0.213 * value,
-            0.715 + 0.285 * value,
-            0.072 - 0.072 * value,
-            0.213 - 0.213 * value,
-            0.715 - 0.715 * value,
-            0.072 + 0.928 * value,
-        ]);
+        const out = new Array<number>(9);
+        for (let i = 0; i < 9; i++) {
+            out[i] = DESATURATE_MATRIX[i] + (IDENTITY_MATRIX[i] - DESATURATE_MATRIX[i]) * value;
+        }
+        this.multiply(out);
     }
 
-    /**
-     * 矩阵乘法（内部方法，用于实现各种滤镜效果）
-     * @param matrix - 3x3 变换矩阵
-     */
-    multiply(matrix: number[]): void {
-        const newR = this.clamp(this.r * matrix[0] + this.g * matrix[1] + this.b * matrix[2]);
-        const newG = this.clamp(this.r * matrix[3] + this.g * matrix[4] + this.b * matrix[5]);
-        const newB = this.clamp(this.r * matrix[6] + this.g * matrix[7] + this.b * matrix[8]);
-        this.r = newR;
-        this.g = newG;
-        this.b = newB;
+    multiply(matrix: readonly number[]): void {
+        const { r, g, b } = this;
+        this.r = clamp255(r * matrix[0] + g * matrix[1] + b * matrix[2]);
+        this.g = clamp255(r * matrix[3] + g * matrix[4] + b * matrix[5]);
+        this.b = clamp255(r * matrix[6] + g * matrix[7] + b * matrix[8]);
     }
 
-    /**
-     * 亮度调整
-     * @param value - 亮度乘数，默认为 1（原始亮度）
-     * @description 调整颜色亮度，模拟 CSS filter: brightness()
-     */
     brightness(value = 1): void {
         this.linear(value);
     }
 
-    /**
-     * 对比度调整
-     * @param value - 对比度乘数，默认为 1（原始对比度）
-     * @description 调整颜色对比度，模拟 CSS filter: contrast()
-     */
     contrast(value = 1): void {
         this.linear(value, -(0.5 * value) + 0.5);
     }
 
-    /**
-     * 线性调整（内部方法）
-     * @param slope - 斜率
-     * @param intercept - 截距
-     */
     linear(slope = 1, intercept = 0): void {
-        this.r = this.clamp(this.r * slope + intercept * 255);
-        this.g = this.clamp(this.g * slope + intercept * 255);
-        this.b = this.clamp(this.b * slope + intercept * 255);
+        const offset = intercept * 255;
+        this.r = clamp255(this.r * slope + offset);
+        this.g = clamp255(this.g * slope + offset);
+        this.b = clamp255(this.b * slope + offset);
     }
 
-    /**
-     * 反相处理
-     * @param value - 反相强度（0-1），默认为 1（完全反相）
-     * @description 反转颜色，模拟 CSS filter: invert()
-     */
     invert(value = 1): void {
-        this.r = this.clamp((value + this.r / 255 * (1 - 2 * value)) * 255);
-        this.g = this.clamp((value + this.g / 255 * (1 - 2 * value)) * 255);
-        this.b = this.clamp((value + this.b / 255 * (1 - 2 * value)) * 255);
+        const scale = 1 - 2 * value;
+        const base = value * 255;
+        this.r = clamp255(base + this.r * scale);
+        this.g = clamp255(base + this.g * scale);
+        this.b = clamp255(base + this.b * scale);
     }
 
-    /**
-     * 转换为 HSL 颜色
-     * @returns HSL 颜色对象
-     */
     hsl(): HSLColor {
         const r = this.r / 255;
         const g = this.g / 255;
@@ -210,9 +187,15 @@ export class Color {
             const d = max - min;
             s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
             switch (max) {
-                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                case g: h = (b - r) / d + 2; break;
-                case b: h = (r - g) / d + 4; break;
+                case r:
+                    h = (g - b) / d + (g < b ? 6 : 0);
+                    break;
+                case g:
+                    h = (b - r) / d + 2;
+                    break;
+                default:
+                    h = (r - g) / d + 4;
+                    break;
             }
             h /= 6;
         }
@@ -220,13 +203,8 @@ export class Color {
         return { h: h * 100, s: s * 100, l: l * 100 };
     }
 
-    /**
-     * 限制数值在 0-255 范围内
-     * @param value - 要限制的数值
-     * @returns 限制后的数值
-     */
     clamp(value: number): number {
-        return Math.max(0, Math.min(255, value));
+        return clamp255(value);
     }
 }
 
@@ -239,31 +217,18 @@ export class Solver {
     targetHSL: HSLColor;
     reusedColor: Color;
 
-    /**
-     * 创建 Solver 实例
-     * @param target - 目标颜色
-     * @param baseColor - 基础颜色，默认为黑色
-     */
     constructor(target: Color, baseColor = new Color(0, 0, 0)) {
         this.target = target;
         this.targetHSL = target.hsl();
         this.reusedColor = baseColor;
     }
 
-    /**
-     * 求解最佳 CSS filter 参数
-     * @returns 包含数值、损失值和 CSS filter 字符串的结果对象
-     * @example
-     * const solver = new Solver(new Color(255, 0, 0));
-     * const result = solver.solve();
-     * // result.filter = 'filter: invert(0%) sepia(0%) saturate(1%) ...'
-     */
     solve(): SolverResult {
         const result = this.solveNarrow(this.solveWide());
         return {
             values: result.values,
             loss: result.loss,
-            filter: this.css(result.values)
+            filter: this.css(result.values),
         };
     }
 
@@ -272,10 +237,9 @@ export class Solver {
         const c = 15;
         const a = [60, 180, 18000, 600, 1.2, 1.2];
 
-        let best = { loss: Infinity };
+        let best: { loss: number; values?: number[] } = { loss: Infinity };
         for (let i = 0; best.loss > 25 && i < 3; i++) {
-            const initial = [50, 20, 3750, 50, 100, 100];
-            const result = this.spsa(A, a, c, initial, 1000);
+            const result = this.spsa(A, a, c, [...WIDE_SEARCH_INITIAL], 1000);
             if (result.loss < best.loss) {
                 best = result;
             }
@@ -288,34 +252,34 @@ export class Solver {
         const c = 2;
         const A1 = A + 1;
         const a = [0.25 * A1, 0.25 * A1, A1, 0.25 * A1, 0.2 * A1, 0.2 * A1];
+        const initial = wide.values ?? [...WIDE_SEARCH_INITIAL];
 
-        return this.spsa(A, a as number[], c, wide.values || [50, 20, 3750, 50, 100, 100], 500);
+        return this.spsa(A, a, c, initial, 500);
     }
 
     spsa(A: number, a: number[], c: number, values: number[], iters: number): SolverResult {
         const alpha = 1;
-        const gamma = 0.16666666666666666;
 
         let best = [...values];
         let bestLoss = Infinity;
 
-        const deltas = new Array(6);
-        const highArgs = new Array(6);
-        const lowArgs = new Array(6);
+        const deltas = new Array<number>(FILTER_PARAM_COUNT);
+        const highArgs = new Array<number>(FILTER_PARAM_COUNT);
+        const lowArgs = new Array<number>(FILTER_PARAM_COUNT);
 
         for (let k = 0; k < iters; k++) {
-            const ck = c / Math.pow(k + 1, gamma);
-            for (let i = 0; i < 6; i++) {
+            const ck = c / Math.pow(k + 1, SPSA_GAMMA);
+            for (let i = 0; i < FILTER_PARAM_COUNT; i++) {
                 deltas[i] = Math.random() > 0.5 ? 1 : -1;
                 highArgs[i] = values[i] + ck * deltas[i];
                 lowArgs[i] = values[i] - ck * deltas[i];
             }
 
             const lossDiff = this.loss(highArgs) - this.loss(lowArgs);
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < FILTER_PARAM_COUNT; i++) {
                 const g = lossDiff / (2 * ck) * deltas[i];
                 const ak = a[i] / Math.pow(A + k + 1, alpha);
-                values[i] = fix(values[i] - ak * g, i);
+                values[i] = clampFilterParam(values[i] - ak * g, i);
             }
 
             const loss = this.loss(values);
@@ -326,18 +290,6 @@ export class Solver {
         }
 
         return { values: best, loss: bestLoss, filter: this.css(best) };
-
-        function fix(value: number, idx: number): number {
-            let max = 100;
-            if (idx === 2) max = 7500;
-            else if (idx === 4 || idx === 5) max = 200;
-            if (idx === 3) {
-                if (value > max) value %= max;
-                else if (value < 0) value = max + value % max;
-            } else if (value < 0) value = 0;
-            else if (value > max) value = max;
-            return value;
-        }
     }
 
     loss(filters: number[]): number {
@@ -362,9 +314,8 @@ export class Solver {
     }
 
     css(filters: number[]): string {
-        function fmt(idx: number, multiplier = 1): string {
-            return String(Math.round(filters[idx] * multiplier));
-        }
+        const fmt = (idx: number, multiplier = 1): string =>
+            String(Math.round(filters[idx] * multiplier));
         return `filter: invert(${fmt(0)}%) sepia(${fmt(1)}%) saturate(${fmt(2)}%) hue-rotate(${fmt(3, 3.6)}deg) brightness(${fmt(4)}%) contrast(${fmt(5)}%);`;
     }
 }
@@ -373,15 +324,15 @@ export class Solver {
  * 十六进制颜色转 RGB 数组
  * @param hex - 十六进制颜色值（可带或不带 #）
  * @returns RGB 数组 [r, g, b]，解析失败返回 null
- * @example
- * hexToRgb('#ff0000') // [255, 0, 0]
- * hexToRgb('00ff00')  // [0, 255, 0]
  */
 export const hexToRgb = (hex: string): number[] | null => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? [
-        parseInt(result[1], 16),
-        parseInt(result[2], 16),
-        parseInt(result[3], 16)
-    ] : null;
+    const normalized = hex.trim().replace(/^#/, '');
+    if (!/^[a-f\d]{6}$/i.test(normalized)) {
+        return null;
+    }
+    return [
+        parseInt(normalized.slice(0, 2), 16),
+        parseInt(normalized.slice(2, 4), 16),
+        parseInt(normalized.slice(4, 6), 16),
+    ];
 };

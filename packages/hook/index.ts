@@ -7,4 +7,3 @@
 export * from './use-click/use-click';
 export * from './use-mitt/use-mitt';
 export * from './use-defer/use-defer';
-export * from './use-number/use-number';

@@ -10,13 +10,18 @@ import * as toUtils from './to';
  * 数据转换工具集合接口
  */
 export interface ToUtils {
+    setStrTrim: typeof toUtils.setStrTrim;
+    strClone: typeof toUtils.strClone;
+    formatPhoneDisplay: typeof toUtils.formatPhoneDisplay;
+    maskPhone: typeof toUtils.maskPhone;
+    formatDateTime: typeof toUtils.formatDateTime;
     toPhoneFormat: typeof toUtils.toPhoneFormat;
     toPhoneHide: typeof toUtils.toPhoneHide;
     scoreToYuan: typeof toUtils.scoreToYuan;
     yuanToScore: typeof toUtils.yuanToScore;
     setEmpty: typeof toUtils.setEmpty;
     cleanHtml: typeof toUtils.cleanHtml;
-    getActualLengthTo: typeof toUtils.getActualLengthTo;
+    getActualLength: typeof toUtils.getActualLength;
     toFormData: typeof toUtils.toFormData;
     toSerialize: typeof toUtils.toSerialize;
     toColor: typeof toUtils.toColor;

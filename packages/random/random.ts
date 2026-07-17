@@ -1,9 +1,9 @@
 /**
  * @fileoverview 随机数生成模块
- * @description 提供密码学安全的随机数生成功能
+ * @description 提供常用随机字符串、UUID 等生成（非密码学场景）
  * @module random
  * @author ZAIUI
- * @version 1.0.0
+ * @version 1.0.2
  */
 
 const NUMBER = '0123456789';
@@ -13,13 +13,15 @@ const ALL_CHARS = NUMBER + LOWER_CASE + UPPER_CASE;
 
 /**
  * 生成 UUID v4（通用唯一标识符）
- * @returns 返回标准的 UUID v4 格式字符串
- * @description 使用 Math.random() 生成，符合 RFC 4122 规范
+ * @returns 返回 UUID v4 格式字符串
+ * @description 优先使用 crypto.randomUUID，不可用时回退 Math.random()
  * @example
  * getUUID() // '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
- * getUUID() // '6ba7b811-9dad-11d1-80b4-00c04fd430c8'
  */
 export const getUUID = (): string => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = Math.random() * 16 | 0;
         const v = c === 'x' ? r : (r & 0x3 | 0x8);

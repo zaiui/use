@@ -20,9 +20,6 @@ export interface ValidateUtils {
     isName: typeof validateUtils.isName;
     isNum: typeof validateUtils.isNum;
     isNumord: typeof validateUtils.isNumord;
-    isObjNull: typeof validateUtils.isObjNull;
-    isArrNull: typeof validateUtils.isArrNull;
-    isNullES: typeof validateUtils.isNullES;
     isEmpty: typeof validateUtils.isEmpty;
     isValidLicensePlate: typeof validateUtils.isValidLicensePlate;
     isNumberReg: typeof validateUtils.isNumberReg;

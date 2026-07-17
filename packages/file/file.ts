@@ -6,6 +6,8 @@
  * @version 1.0.0
  */
 
+import { isBrowser } from '../shared/browser';
+
 /**
  * 获取文件大小的格式化结果
  * @param size - 文件大小（字节）
@@ -154,6 +156,9 @@ export const downloadFile = async (
     response: { data: Blob; headers: Record<string, string> },
     fileName?: string
 ): Promise<{ code: number; msg: string }> => {
+    if (!isBrowser()) {
+        return { code: 500, msg: '下载失败' };
+    }
     try {
         const blob = response.data;
         const url = window.URL.createObjectURL(blob);

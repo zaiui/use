@@ -175,6 +175,30 @@ export const objEqual = (obj1: unknown, obj2: unknown): boolean => {
     if (obj1 instanceof RegExp && obj2 instanceof RegExp) {
         return obj1.source === obj2.source && obj1.flags === obj2.flags;
     }
+
+    if (obj1 instanceof Map && obj2 instanceof Map) {
+        if (obj1.size !== obj2.size) {
+            return false;
+        }
+        for (const [key, val] of obj1) {
+            if (!obj2.has(key) || !objEqual(val, obj2.get(key))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    if (obj1 instanceof Set && obj2 instanceof Set) {
+        if (obj1.size !== obj2.size) {
+            return false;
+        }
+        for (const val of obj1) {
+            if (!obj2.has(val)) {
+                return false;
+            }
+        }
+        return true;
+    }
     
     if (Array.isArray(obj1) && Array.isArray(obj2)) {
         if (obj1.length !== obj2.length) {

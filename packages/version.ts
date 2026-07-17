@@ -1,5 +1,6 @@
+import packageJson from '../package.json';
+
 /**
- * 库的版本号
- * @example "1.0.0"
+ * 库的版本号（与 package.json 同步）
  */
-export const version = '1.0.0';
+export const version = packageJson.version;

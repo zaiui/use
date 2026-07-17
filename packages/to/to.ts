@@ -3,8 +3,130 @@
  * @description 提供全面的数据转换功能
  * @module to
  * @author ZAIUI
- * @version 1.0.0
+ * @version 1.0.4
  */
+
+import { isEmpty } from '../validate/index';
+import dayjs from './dayjs';
+import type { Dayjs } from 'dayjs';
+
+const MAINLAND_MOBILE_LENGTH = 11;
+
+const withMainlandMobile = (
+    phone: unknown,
+    format: (digits: string) => string
+): string => {
+    if (isEmpty(phone)) {
+        return '';
+    }
+    const text = String(phone);
+    if (text.length !== MAINLAND_MOBILE_LENGTH) {
+        return text;
+    }
+    return format(text);
+};
+
+/**
+ * 去除字符串中所有空白字符
+ * @param str - 原字符串
+ * @returns 去除空白后的字符串，空值返回 ''
+ * @example
+ * setStrTrim('  a b  ') // 'ab'
+ * setStrTrim(null)      // ''
+ */
+export const setStrTrim = (str: unknown): string => {
+    if (isEmpty(str)) {
+        return '';
+    }
+    return String(str).replace(/\s/g, '');
+};
+
+/**
+ * 字符串克隆（转为 string 副本）
+ * @param str - 原值
+ * @returns 字符串形式，空值返回 ''
+ * @example
+ * strClone('hello') // 'hello'
+ * strClone(123)     // '123'
+ */
+export const strClone = (str: unknown): string => {
+    if (isEmpty(str)) {
+        return '';
+    }
+    return String(str);
+};
+
+/**
+ * 格式化电话号码显示（中间添加空格）
+ * @param phone - 11 位大陆手机号
+ * @returns 格式为 `XXX XXXX XXXX`；非 11 位原样返回
+ * @example
+ * formatPhoneDisplay('18203088057') // '182 0308 8057'
+ */
+export const formatPhoneDisplay = (phone: unknown): string => {
+    return withMainlandMobile(phone, (digits) =>
+        `${digits.slice(0, 3)} ${digits.slice(3, 7)} ${digits.slice(7)}`
+    );
+};
+
+/**
+ * 隐藏手机号中间四位
+ * @param phone - 11 位大陆手机号
+ * @returns 格式为 `XXX****XXXX`；非 11 位原样返回
+ * @example
+ * maskPhone('18203088057') // '182****8057'
+ */
+export const maskPhone = (phone: unknown): string => {
+    return withMainlandMobile(phone, (digits) =>
+        `${digits.slice(0, 3)}****${digits.slice(7)}`
+    );
+};
+
+/**
+ * 友好的相对/绝对时间显示（中文，基于 dayjs zh-cn）
+ * @param date - 时间戳、ISO 字符串、Date 或 Dayjs
+ * @returns 如「刚刚」「5分钟前」「昨天 14:30」「2024年01月02日 08:00」
+ */
+export const formatDateTime = (date: string | number | Date | Dayjs): string => {
+    const target = dayjs(date);
+    if (!target.isValid()) {
+        return String(date);
+    }
+
+    const now = dayjs();
+    if (target.isAfter(now)) {
+        return formatAbsoluteDateTime(target, now);
+    }
+
+    const diffMinutes = now.diff(target, 'minute');
+
+    if (diffMinutes < 1) {
+        return '刚刚';
+    }
+    if (diffMinutes < 60) {
+        return target.fromNow();
+    }
+    if (diffMinutes < 60 * 24) {
+        return target.fromNow();
+    }
+
+    const diffDays = now.startOf('day').diff(target.startOf('day'), 'day');
+
+    if (diffDays === 1) {
+        return `昨天 ${target.format('HH:mm')}`;
+    }
+    if (diffDays === 2) {
+        return `前天 ${target.format('HH:mm')}`;
+    }
+    return formatAbsoluteDateTime(target, now);
+};
+
+const formatAbsoluteDateTime = (target: Dayjs, now: Dayjs): string => {
+    if (target.isSame(now, 'year')) {
+        return target.format('MM月DD日 HH:mm');
+    }
+    return target.format('YYYY年MM月DD日 HH:mm');
+};
 
 /**
  * 格式化电话号码显示（中间添加空格）
@@ -105,11 +227,11 @@ export const cleanHtml = (value: string): string => {
  * @param value - 要计算长度的字符串
  * @returns 字符串的实际字符数（Emoji 表情计为 1 个字符）
  * @example
- * getActualLengthTo('hello')        // 5
- * getActualLengthTo('你好')         // 2
- * getActualLengthTo('👋🌍')          // 2
+ * getActualLength('hello')        // 5
+ * getActualLength('你好')         // 2
+ * getActualLength('👋🌍')          // 2
  */
-export const getActualLengthTo = (value: string): number => {
+export const getActualLength = (value: string): number => {
     return Array.from(value).length;
 };
 

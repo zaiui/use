@@ -10,7 +10,6 @@ import * as osUtils from './os';
  * 操作系统/浏览器工具集合接口
  */
 export interface OsUtils {
-    getActualLength: typeof osUtils.getActualLength;
     getOsBit: typeof osUtils.getOsBit;
     getBrowserVersion: typeof osUtils.getBrowserVersion;
     fullScreen: typeof osUtils.fullScreen;

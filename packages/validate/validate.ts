@@ -195,50 +195,6 @@ export const isNumord = (value: unknown): boolean => {
 };
 
 /**
- * 判断对象是否为空（没有属性）
- * @param value - 要验证的值
- * @returns 如果对象为空或不是对象类型返回 true，否则返回 false
- * @example
- * isObjNull({})                         // true
- * isObjNull(null)                       // true
- * isObjNull({ a: 1 })                   // false
- * isObjNull([])                         // true
- */
-export const isObjNull = (value: unknown): boolean => {
-    return !isObject(value) || Object.keys(value).length === 0;
-};
-
-/**
- * 判断数组是否为空（没有元素）
- * @param arr - 要验证的值
- * @returns 如果数组为空或不是数组类型返回 true，否则返回 false
- * @example
- * isArrNull([])                         // true
- * isArrNull(null)                       // true
- * isArrNull([1, 2, 3])                  // false
- * isArrNull({})                         // true
- */
-export const isArrNull = (arr: unknown): boolean => {
-    return !isArray(arr) || arr.length === 0;
-};
-
-/**
- * 判断是否为空值（采用 ES6 空值合并运算符）
- * @param value - 要验证的值
- * @returns 如果值是 undefined 或 null 返回 true，否则返回 false
- * @description 使用 ?? 运算符判断，等同于 value === null || value === undefined
- * @example
- * isNullES(null)                        // true
- * isNullES(undefined)                  // true
- * isNullES('')                          // false
- * isNullES(0)                           // false
- * isNullES(false)                      // false
- */
-export const isNullES = (value: unknown): boolean => {
-    return (value ?? '') === '';
-};
-
-/**
  * 检查值是否为空值
  * @param value - 要检查的值
  * @returns 如果值是空值返回 true，否则返回 false

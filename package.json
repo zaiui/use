@@ -1,34 +1,33 @@
 {
     "name": "@zaiui/use",
     "type": "module",
-    "version": "1.0.2",
+    "version": "1.0.4",
+    "description": "JavaScript / TypeScript 工具函数库",
     "scripts": {
         "dev": "tsup-node --watch",
-        "build": "tsup-node",
-        "clean": "rimraf dist lib es types",
+        "build": "tsup-node && tsc -p tsconfig.dts.json",
+        "clean": "rimraf dist",
         "typecheck": "tsc --noEmit",
-        "watch": "tsup-node --watch",
         "link": "yarn link",
         "unlink": "yarn unlink"
     },
-    "sideEffects": false,
+    "sideEffects": [
+        "./packages/to/dayjs.ts"
+    ],
     "main": "./dist/index.js",
     "module": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
-            "import": "./dist/index.js",
-            "require": "./dist/index.cjs"
-        },
-        "./*": "./*"
-    },
-    "typesVersions": {
-        "*": {
-            "*": [
-                "./dist/*",
-                "./*"
-            ]
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            },
+            "require": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.cjs"
+            }
         }
     },
     "files": [
@@ -36,20 +35,28 @@
         "LICENSE",
         "README.md"
     ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/zaiui/use.git"
+    },
+    "homepage": "https://github.com/zaiui/use#readme",
+    "bugs": {
+        "url": "https://github.com/zaiui/use/issues"
+    },
     "engines": {
         "node": ">=16.0.0"
     },
+    "dependencies": {
+        "dayjs": "^1.11.19"
+    },
     "devDependencies": {
-        "@types/node": "^25.2.0",
+        "@types/node": "^26.1.1",
         "rimraf": "^6.1.2",
         "tsup": "^8.5.1",
-        "typescript": "^5.9.3"
-    },
-    "dependencies": {
-        "bignumber.js": "^10.0.2"
+        "typescript": "^7.0.2"
     },
     "author": "iZaiZaiA<https://github.com/iZaiZaiA>",
-    "copyright": "Copyright © 2023 iZaiZaiA And @zaiui/use",
+    "copyright": "Copyright © 2026 iZaiZaiA And @zaiui/use",
     "license": "MIT",
     "keywords": [
         "library",
