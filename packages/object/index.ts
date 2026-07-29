@@ -11,6 +11,7 @@ import * as objectUtils from './object';
  */
 export interface ObjectUtils {
     deepClone: typeof objectUtils.deepClone;
+    cloneJson: typeof objectUtils.cloneJson;
     deepCloneStr: typeof objectUtils.deepCloneStr;
     objHasKey: typeof objectUtils.objHasKey;
     objEqual: typeof objectUtils.objEqual;

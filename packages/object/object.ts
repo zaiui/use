@@ -115,6 +115,21 @@ export const deepCloneStr = (str: string | number): string | number => {
 };
 
 /**
+ * 通过 JSON 序列化克隆（仅 JSON 可表示的数据；Date 等会丢失或变形）
+ * @param data - 要克隆的值
+ * @returns 克隆结果；序列化失败时返回原值
+ * @example
+ * cloneJson({ a: 1, b: [2] }) // { a: 1, b: [2] } 新引用
+ */
+export const cloneJson = <T>(data: T): T => {
+    try {
+        return JSON.parse(JSON.stringify(data)) as T;
+    } catch {
+        return data;
+    }
+};
+
+/**
  * 检查对象是否包含指定键或是否为空
  * @param obj - 要检查的对象
  * @param key - 可选的键名，不提供时仅检查对象是否为空

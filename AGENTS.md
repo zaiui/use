@@ -63,8 +63,8 @@ configureUse({
 | `validate` | `isEmpty`, `isPhone`, `isEmail`, `isIdCard`, `formValidate` | 空值与格式校验 |
 | `type` | `getType`, `isPlainObject`, `isArray`, `isPromise` | JS 类型判断 |
 | `array` | `arrIndex`, `arrDel`, `arrDelKey`, `recursionChildren`, `arrToKey` | 一维/二维数组、树形 |
-| `object` | 深拷贝、合并、键路径等（见 `dist/object` 类型） | 对象操作 |
-| `to` | `formatDateTime`, `priceFormat`, `toParse`, `maskPhone`, `toFormData` | 字符串/数字/日期/颜色转换 |
+| `object` | `deepClone`, `cloneJson`, `objEqual`, `getObjVal` 等 | 对象操作 |
+| `to` | `formatDateTime`, `scoreToYuan`, `scoreToWan`, `toParse`, `toQuery`, `setContent`, `maskPhone` | 字符串/数字/日期/颜色转换 |
 | `store` | `setStore`, `getStore`, `delStore`, `storeTime`, `clearStore` | localStorage / sessionStorage |
 | `random` | 随机字符串、数字等 | 见类型声明 |
 | `file` | 文件相关工具 | 见类型声明 |

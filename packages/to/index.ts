@@ -19,11 +19,14 @@ export interface ToUtils {
     toPhoneHide: typeof toUtils.toPhoneHide;
     scoreToYuan: typeof toUtils.scoreToYuan;
     yuanToScore: typeof toUtils.yuanToScore;
+    scoreToWan: typeof toUtils.scoreToWan;
     setEmpty: typeof toUtils.setEmpty;
+    setContent: typeof toUtils.setContent;
     cleanHtml: typeof toUtils.cleanHtml;
     getActualLength: typeof toUtils.getActualLength;
     toFormData: typeof toUtils.toFormData;
     toSerialize: typeof toUtils.toSerialize;
+    toQuery: typeof toUtils.toQuery;
     toColor: typeof toUtils.toColor;
     toLighten: typeof toUtils.toLighten;
     toParse: typeof toUtils.toParse;

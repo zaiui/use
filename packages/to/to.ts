@@ -6,11 +6,22 @@
  * @version 1.0.4
  */
 
+import { isPlainObject } from '../type/index';
 import { isEmpty } from '../validate/index';
 import dayjs from './dayjs';
 import type { Dayjs } from 'dayjs';
+import Decimal from 'decimal.js';
 
 const MAINLAND_MOBILE_LENGTH = 11;
+
+/** 为金额字符串整数部分添加千分位（保留小数段） */
+const formatWithGroupSeparator = (value: string): string => {
+    const sign = value.startsWith('-') ? '-' : '';
+    const unsigned = sign ? value.slice(1) : value;
+    const [intPart, fracPart] = unsigned.split('.');
+    const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return fracPart !== undefined ? `${sign}${grouped}.${fracPart}` : `${sign}${grouped}`;
+};
 
 const withMainlandMobile = (
     phone: unknown,
@@ -168,14 +179,19 @@ export const toPhoneHide = (phone: string): string => {
  * scoreToYuan(100000, true, true) // '1,000.00'
  */
 export const scoreToYuan = (score: number | string, decimal = false, separator = false): string => {
-    const num = typeof score === 'string' ? parseFloat(score) : score;
-    if (isNaN(num)) return '0';
-    const yuan = num / 100;
-    let result = decimal ? yuan.toFixed(2) : String(Math.floor(yuan));
-    if (separator) {
-        result = result.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (isEmpty(score)) return '0';
+    try {
+        const fen = new Decimal(score);
+        const yuan = fen.div(100);
+        const decimalPlaces = decimal ? 2 : 0;
+        let result = yuan.toFixed(decimalPlaces, Decimal.ROUND_HALF_UP);
+        if (separator) {
+            result = formatWithGroupSeparator(result);
+        }
+        return result;
+    } catch {
+        return '0';
     }
-    return result;
 };
 
 /**
@@ -188,9 +204,44 @@ export const scoreToYuan = (score: number | string, decimal = false, separator =
  * yuanToScore('0')    // 0
  */
 export const yuanToScore = (str: number | string): number => {
-    const num = typeof str === 'string' ? parseFloat(str) : str;
-    if (isNaN(num)) return 0;
-    return Math.round(num * 100);
+    if (isEmpty(str)) return 0;
+    try {
+        const yuan = new Decimal(str);
+        const fen = yuan.mul(100).toDecimalPlaces(0, Decimal.ROUND_DOWN);
+        return Number(fen.toString());
+    } catch {
+        return 0;
+    }
+};
+
+/**
+ * 将分转换为万元（金额转换）
+ * @param score - 分数金额
+ * @param decimal - 小数位数，默认为 2
+ * @param separator - 是否添加千分位分隔符，默认为 false
+ * @returns 转换后的万元金额字符串
+ * @example
+ * scoreToWan(1000000)              // '1.00'
+ * scoreToWan(1000000, 0)           // '1'
+ * scoreToWan(123456789, 2, true)   // '123.46'
+ */
+export const scoreToWan = (
+    score: number | string,
+    decimal = 2,
+    separator = false
+): string => {
+    if (isEmpty(score)) return '0';
+    try {
+        const fen = new Decimal(score);
+        const wan = fen.div(1_000_000);
+        let result = wan.toFixed(decimal, Decimal.ROUND_HALF_UP);
+        if (separator) {
+            result = formatWithGroupSeparator(result);
+        }
+        return result;
+    } catch {
+        return '0';
+    }
 };
 
 /**
@@ -208,6 +259,21 @@ export const yuanToScore = (str: number | string): number => {
 export const setEmpty = (value: unknown, df = ''): string => {
     if (value === null || value === undefined) return df;
     return String(value);
+};
+
+/**
+ * 空值时使用默认值（保留原类型；空值语义与 isEmpty 一致）
+ * @param val - 原值
+ * @param df - 默认值，默认为空字符串
+ * @returns 非空返回 val，否则返回 df
+ * @example
+ * setContent(null, '-')     // '-'
+ * setContent('', '默认')     // '默认'
+ * setContent(0, '-')         // 0（0 不为空）
+ * setContent([], [])         // []（空数组视为空，返回 df）
+ */
+export const setContent = <T>(val: unknown, df: T = '' as T): T => {
+    return isEmpty(val) ? df : (val as T);
 };
 
 /**
@@ -267,6 +333,47 @@ export const toSerialize = (form: Record<string, unknown>): string => {
         .join('&');
 };
 
+export interface ToQueryOptions {
+    /** 是否在结果前加 `?`，默认 false */
+    prefix?: boolean;
+    /** 是否对键值做 URL 编码，默认 true */
+    encode?: boolean;
+}
+
+/**
+ * 将普通对象转为 URL 查询字符串
+ * @param data - 键值对象
+ * @param options - prefix：是否带 `?`；encode：是否 encodeURIComponent
+ * @returns 查询串；空对象或非 plain object 返回 `''`（prefix 为 true 且无键时也为 `''`）
+ * @example
+ * toQuery({ a: 1, b: 'x' })                    // 'a=1&b=x'（编码后）
+ * toQuery({ a: 1 }, { prefix: true })          // '?a=1'
+ * toQuery({ name: '张三' }, { encode: false }) // 'name=张三'
+ */
+export const toQuery = (
+    data: Record<string, unknown>,
+    options: ToQueryOptions = {}
+): string => {
+    const { prefix = false, encode = true } = options;
+    if (isEmpty(data) || !isPlainObject(data)) {
+        return '';
+    }
+    const keys = Object.keys(data);
+    if (keys.length === 0) {
+        return '';
+    }
+    const pairs = keys.map((key) => {
+        const k = setEmpty(key);
+        const v = setEmpty(data[key]);
+        if (encode) {
+            return `${encodeURIComponent(k)}=${encodeURIComponent(v)}`;
+        }
+        return `${k}=${v}`;
+    });
+    const query = pairs.join('&');
+    return prefix ? `?${query}` : query;
+};
+
 /**
  * 混合两种颜色
  * @param c1 - 第一个颜色（十六进制）
@@ -321,18 +428,29 @@ export const toLighten = (color: string, amount = 0.5): string => {
 };
 
 /**
- * 安全解析 JSON 字符串
- * @param value - JSON 字符串
- * @param d - 解析失败时的默认值
- * @returns 解析后的对象或默认值
+ * 安全解析 JSON（兼容已解析对象、null、空白字符串等）
+ * @param data - JSON 字符串、对象或其它可 stringify 的值
+ * @param d - 解析失败或为空时的默认值
+ * @returns 解析结果或默认值
  * @example
  * toParse('{"name": "张三"}')         // { name: '张三' }
  * toParse('invalid', { name: '' })   // { name: '' }
- * toParse('123')                     // 123
+ * toParse({ ok: 1 })                 // { ok: 1 }
+ * toParse('   ', {})                 // {}
  */
-export const toParse = <T>(value: string, d?: T): T => {
+export const toParse = <T>(data: unknown, d?: T): T => {
     try {
-        return JSON.parse(value) as T;
+        if (data == null) {
+            return d as T;
+        }
+        if (typeof data === 'object') {
+            return data as T;
+        }
+        const str = String(data).trim();
+        if (!str) {
+            return d as T;
+        }
+        return JSON.parse(str) as T;
     } catch {
         return d as T;
     }

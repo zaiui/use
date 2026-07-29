@@ -8,7 +8,7 @@ export default defineConfig({
     clean: true,
     treeshake: true,
     cjsInterop: true,
-    external: ['dayjs'],
+    external: ['dayjs', 'decimal.js'],
     outExtension({ format }) {
         return {
             js: format === 'cjs' ? '.cjs' : '.js',
